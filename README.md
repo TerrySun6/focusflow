@@ -1,7 +1,7 @@
 # FocusFlow — 基于 PHATE 降维的语义流形分析与逻辑可视化
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 **FocusFlow** 是一个用于文本/视频语义逻辑分析的 Python 研究项目。它通过 **BGE-M3 嵌入** + **EMA 时序平滑** + **Centering 去偏** + **PHATE 3D 降维** + **Leiden/HDBSCAN 聚类** + **PELT 变点检测** 的完整管线，将文本的逻辑结构映射到三维语义流形上，并进行定量分析和可视化。
 
@@ -140,7 +140,7 @@ focusflow/
 
 ## 📄 许可证
 
-MIT License © 2026 TerrySun6
+Apache License 2.0 © 2026 TerrySun6
 
 ---
 
