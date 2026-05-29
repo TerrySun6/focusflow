@@ -1,0 +1,49 @@
+graph LR
+    subgraph 嵌入层
+        BGE["BGE-M3<br/>1024维"]
+        MLX["MLX / ST<br/>推理加速"]
+    end
+
+    subgraph 平滑层
+        EMA["滑动窗口<br/>指数衰减"]
+        CTR["零均值<br/>中心化"]
+    end
+
+    subgraph 降维层
+        PH["PHATE<br/>势能距离"]
+        MDS["SMACOF<br/>MDS"]
+    end
+
+    subgraph 聚类层
+        LEI["Leiden<br/>模块度优化"]
+    end
+
+    subgraph 分段层
+        PELT["PELT 变点检测<br/>（原始 embedding）"]
+        MRG["簇合并<br/>边界融合"]
+    end
+
+    subgraph 评估层
+        MANIFOLD["3维语义<br/>流形分析"]
+        METRICS["设计量化逻辑评估指标"]
+    end
+
+    subgraph 应用层
+        DS["DeepSeek<br/>流式摘要"]
+        PLT["Plotly<br/>3D可视化"]
+    end
+
+    BGE --> EMA --> CTR --> PH --> MDS --> PLT
+    MDS --> MANIFOLD
+    MDS --> METRICS
+    CTR --> LEI --> MRG
+    BGE --> PELT --> MRG
+    MRG --> DS
+
+    style 嵌入层 fill:#e3f2fd,stroke:#1565c0
+    style 平滑层 fill:#fff3e0,stroke:#ef6c00
+    style 降维层 fill:#f3e5f5,stroke:#6a1b9a
+    style 聚类层 fill:#e8f5e9,stroke:#2e7d32
+    style 分段层 fill:#fce4ec,stroke:#c62828
+    style 评估层 fill:#ede7f6,stroke:#4527a0
+    style 应用层 fill:#fff8e1,stroke:#f9a825

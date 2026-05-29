@@ -1,0 +1,82 @@
+# ── 操作系统 ──
+.DS_Store
+Thumbs.db
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ── 虚拟环境 ──
+venv/
+.venv/
+env/
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── 个人/隐私文件 ──
+面试准备_*.md
+历次论文要点复习.md
+school/
+feb/
+visualization/
+video_rating.py
+index.html
+
+# ── 大型二进制/数据文件 ──
+*.npy
+*.wav
+*.mov
+*.mp4
+*.mp3
+*.heic
+*.HEIC
+
+# ── 生成的输出与中间数据 ──
+*.html
+!latest_code/**/templates/*.html
+chunks.json
+embeddings.npy
+whisper_segments.json
+
+# ── 测试数据目录（大型文本） ──
+latest_code/test_text/
+
+# ── 临时文件 ──
+~$*
+.centering_cache_*/
+my_document*/
+document/
+
+# ── 文档（含个人信息） ──
+*.docx
+*.doc
+*.pptx
+*.key
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.xlsx
+*.csv
+
+# ── 缓存 ──
+.cline/
+.cache/
+
+# ── 压缩包 ──
+*.zip
+*.dmg

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>📄 语义分析器 (Centering 版)</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+               background: #f5f7fa; color: #1a1a2e; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { font-size: 1.6rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .layout { display: flex; gap: 20px; }
+        .sidebar { width: 300px; flex-shrink: 0; }
+        .main { flex: 1; min-width: 0; }
+        .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .card h3 { font-size: 0.95rem; color: #555; margin-bottom: 12px; }
+        label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 4px; margin-top: 10px; }
+        input[type="text"], input[type="number"], select {
+            width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px;
+            font-size: 0.9rem; }
+        input[type="range"] { width: 100%; margin: 4px 0; }
+        .range-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; }
+        .btn { width: 100%; padding: 10px; background: #4a6cf7; color: white; border: none;
+               border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 600; }
+        .btn:hover { background: #3a5ce5; }
+        .btn:disabled { background: #aaa; cursor: not-allowed; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .checkbox-row input { width: auto; }
+        .chart { width: 100%; height: 500px; }
+        .chart-sm { height: 300px; }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .metric { background: #f8f9fc; border-radius: 8px; padding: 12px; text-align: center; }
+        .metric .val { font-size: 1.3rem; font-weight: 700; color: #4a6cf7; }
+        .metric .lbl { font-size: 0.75rem; color: #888; }
+        .loading { display: none; text-align: center; padding: 40px; }
+        .loading.active { display: block; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #4a6cf7; border-radius: 50%;
+                   width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .error { background: #fee; color: #c33; padding: 12px; border-radius: 8px; margin: 10px 0; }
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab { padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 0.85rem;
+               background: #eee; color: #666; }
+        .tab.active { background: white; color: #4a6cf7; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fc; font-weight: 600; color: #555; }
+        .seg-text { max-height: 150px; overflow-y: auto; background: #fafafa; padding: 8px;
+                    border-radius: 6px; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap; }
+        @media (max-width: 900px) { .layout { flex-direction: column; } .sidebar { width: 100%; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📄 语义分析器 <span style="font-size:0.8rem;color:#888;font-weight:400;">(零均值中心化版)</span></h1>
+    <div class="layout">
+        <div class="sidebar">
+            <div class="card">
+                <h3>📂 文档</h3>
+                <label>文件绝对路径</label>
+                <input type="text" id="filePath" placeholder="/path/to/your/text.txt"
+                       value="{{ request.args.get('path', '') }}">
+                <label>文档标题</label>
+                <input type="text" id="docTitle" placeholder="my_document" value="my_document">
+                <button class="btn" onclick="loadDoc()" style="margin-top:12px;">📥 加载文档</button>
+            </div>
+            <div class="card" id="paramsCard">
+                <h3>🔄 EMA 平滑</h3>
+                <label>EMA α (0=最平滑, 1=不平滑)</label>
+                <input type="range" id="emaAlpha" min="0" max="0.95" step="0.05" value="0.5"
+                       oninput="document.getElementById('alphaVal').textContent=this.value">
+                <div class="range-label"><span>0</span><span id="alphaVal">0.5</span><span>0.95</span></div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="emaBidirectional" checked>
+                    <label style="margin:0;">双向 EMA</label>
+                </div>
+                <label>EMA 窗口大小 (0=全文, >0=局部)</label>
+                <input type="number" id="emaWindow" value="0" min="0" max="200" step="1">
+
+                <h3 style="margin-top:16px;">🎯 PHATE</h3>
+                <label>KNN 邻居数</label>
+                <input type="number" id="phateKnn" value="5" min="2" max="30">
+                <label>距离度量</label>
+                <select id="phateDist">
+                    <option value="cosine">cosine</option>
+                    <option value="euclidean">euclidean</option>
+                    <option value="manhattan">manhattan</option>
+                </select>
+                <label>MDS 方法</label>
+                <select id="mdsMethod">
+                    <option value="metric">metric (SMACOF)</option>
+                    <option value="nonmetric">nonmetric</option>
+                </select>
+
+                <h3 style="margin-top:16px;">🔗 聚类</h3>
+                <label>Leiden 分辨率</label>
+                <input type="range" id="leidenRes" min="0.1" max="3.0" step="0.1" value="1.0"
+                       oninput="document.getElementById('resVal').textContent=this.value">
+                <div class="range-label"><span>0.1</span><span id="resVal">1.0</span><span>3.0</span></div>
+                <label>HDBSCAN 最小簇</label>
+                <input type="number" id="hdbscanMin" value="5" min="2" max="20">
+
+                <h3 style="margin-top:16px;">✂️ PELT 分段</h3>
+                <label>惩罚系数 (越小段越多, 越大段越少)</label>
+                <input type="range" id="peltPenalty" min="0.1" max="20.0" step="0.1" value="5.0"
+                       oninput="document.getElementById('peltVal').textContent=this.value">
+                <div class="range-label"><span>0.1</span><span id="peltVal">5.0</span><span>20.0</span></div>
+
+                <button class="btn" onclick="runAnalysis()" style="margin-top:18px;">🚀 运行分析</button>
+            </div>
+
+            <div class="card">
+                <h3>🤖 DeepSeek 摘要</h3>
+                <button class="btn" onclick="summarizeSegments()" style="margin-top:4px;background:#10a37f;" id="summarizeBtn">📝 生成分段摘要</button>
+                <div style="font-size:0.75rem;color:#888;margin-top:6px;">先运行分析，再点击生成摘要</div>
+            </div>
+        </div>
+
+        <div class="main">
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <div>分析中... (EMA + Centering + PHATE + 聚类 + PELT)</div>
+            </div>
+            <div id="error" class="error" style="display:none;"></div>
+            <div id="results" style="display:none;">
+                <div class="tabs" id="tabs">
+                    <div class="tab active" onclick="switchTab('tab-overview',this)">📊 概览</div>
+                    <div class="tab" onclick="switchTab('tab-coherence',this)">🔬 EMA 效果</div>
+                    <div class="tab" onclick="switchTab('tab-phate',this)">🌐 3D 轨迹</div>
+                    <div class="tab" onclick="switchTab('tab-segments',this)">📋 分段</div>
+                    <div class="tab" onclick="switchTab('tab-summary',this)">🤖 摘要</div>
+                    <div class="tab" onclick="switchTab('tab-log',this)">📝 日志</div>
+                </div>
+
+                <div id="tab-overview" class="tab-content active">
+                    <div class="card"><div class="metric-grid" id="metrics"></div></div>
+                    <div class="card"><div id="clusterChart" class="chart-sm"></div></div>
+                </div>
+                <div id="tab-coherence" class="tab-content">
+                    <div class="card"><div id="coherenceChart" class="chart-sm"></div></div>
+                    <div class="card"><div id="coherenceTable"></div></div>
+                </div>
+                <div id="tab-phate" class="tab-content">
+                    <div class="card"><div id="phateChart" class="chart"></div></div>
+                    <div class="card"><div class="metric-grid" id="trajectoryMetrics"></div></div>
+                </div>
+                <div id="tab-segments" class="tab-content">
+                    <div class="card"><div id="segmentsTable"></div></div>
+                    <div class="card"><div id="segmentsText"></div></div>
+                </div>
+                <div id="tab-summary" class="tab-content">
+                    <div class="card"><div id="summaryContent"></div></div>
+                </div>
+                <div id="tab-log" class="tab-content">
+                    <div class="card"><pre id="logContent" style="max-height:400px;overflow:auto;font-size:0.8rem;background:#f8f9fc;padding:12px;border-radius:8px;"></pre></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentResult = null;
+
+function switchTab(tabId, el) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    el.classList.add('active');
+    // 重新布局 Plotly 图表
+    setTimeout(() => {
+        document.querySelectorAll('.js-plotly-plot').forEach(p => Plotly.Plots.resize(p));
+    }, 100);
+}
+
+// 按下 Enter 加载文档
+document.getElementById('filePath').addEventListener('keydown', e => { if (e.key === 'Enter') loadDoc(); });
+
+async function loadDoc() {
+    const path = document.getElementById('filePath').value.trim();
+    if (!path) { showError('请输入文件路径'); return; }
+    showLoading();
+    hideError();
+    try {
+        const resp = await fetch('/load', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({path, title: document.getElementById('docTitle').value})
+        });
+        const data = await resp.json();
+        hideLoading();
+        if (data.error) { showError(data.error); return; }
+        document.getElementById('results').style.display = 'none';
+        alert(`✅ 文档已加载: ${data.n_chunks} 个句子, embeddings: ${data.has_embeddings}`);
+    } catch(e) { hideLoading(); showError('加载失败: ' + e.message); }
+}
+
+async function runAnalysis() {
+    const path = document.getElementById('filePath').value.trim();
+    if (!path) { showError('请输入文件路径'); return; }
+    showLoading();
+    hideError();
+    try {
+        const resp = await fetch('/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                path,
+                title: document.getElementById('docTitle').value,
+                ema_alpha: parseFloat(document.getElementById('emaAlpha').value),
+                ema_bidirectional: document.getElementById('emaBidirectional').checked,
+                ema_window_size: parseInt(document.getElementById('emaWindow').value),
+                phate_knn: parseInt(document.getElementById('phateKnn').value),
+                phate_knn_dist: document.getElementById('phateDist').value,
+                mds_method: document.getElementById('mdsMethod').value,
+                leiden_resolution: parseFloat(document.getElementById('leidenRes').value),
+                hdbscan_min_cluster_size: parseInt(document.getElementById('hdbscanMin').value),
+                pelt_penalty_multiplier: parseFloat(document.getElementById('peltPenalty').value),
+            })
+        });
+        const data = await resp.json();
+        hideLoading();
+        if (data.error) { showError(data.error); return; }
+        currentResult = data;
+        renderResults(data);
+    } catch(e) { hideLoading(); showError('分析失败: ' + e.message); }
+}
+
+function renderResults(d) {
+    document.getElementById('results').style.display = 'block';
+
+    // ── 概览指标 ──
+    let metricsHtml = `
+        <div class="metric"><div class="val">${d.n_chunks}</div><div class="lbl">句子数</div></div>
+        <div class="metric"><div class="val">${d.ema_alpha}</div><div class="lbl">EMA α</div></div>
+        <div class="metric"><div class="val">${d.ema_direction}</div><div class="lbl">EMA 方向</div></div>
+        <div class="metric"><div class="val">${d.n_clusters}</div><div class="lbl">聚类簇</div></div>
+        <div class="metric"><div class="val">${d.n_segments}</div><div class="lbl">语义段</div></div>
+        <div class="metric"><div class="val">${d.coherence_before.toFixed(4)}</div><div class="lbl">平滑前连贯性</div></div>
+        <div class="metric"><div class="val">${d.coherence_after.toFixed(4)}</div><div class="lbl">平滑后连贯性</div></div>
+        <div class="metric"><div class="val">${(d.coherence_after - d.coherence_before) > 0 ? '+' : ''}${(d.coherence_after - d.coherence_before).toFixed(4)}</div><div class="lbl">Δ 变化</div></div>
+    `;
+    document.getElementById('metrics').innerHTML = metricsHtml;
+
+    // ── 簇分布柱状图 ──
+    if (d.cluster_chart_json) {
+        Plotly.newPlot('clusterChart', JSON.parse(d.cluster_chart_json).data,
+                       JSON.parse(d.cluster_chart_json).layout || {}, {responsive: true});
+    }
+
+    // ── 连贯性图 ──
+    if (d.coherence_chart_json) {
+        Plotly.newPlot('coherenceChart', JSON.parse(d.coherence_chart_json).data,
+                       JSON.parse(d.coherence_chart_json).layout || {}, {responsive: true});
+    }
+
+    // ── 连贯性样本表 ──
+    if (d.coherence_samples) {
+        let tbl = '<table><tr><th>位置</th><th>文本(前)</th><th>原始</th><th>EMA</th></tr>';
+        d.coherence_samples.forEach(s => {
+            tbl += `<tr><td>${s.pos}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.text}</td><td>${s.orig}</td><td>${s.smooth}</td></tr>`;
+        });
+        tbl += '</table>';
+        document.getElementById('coherenceTable').innerHTML = tbl;
+    }
+
+    // ── PHATE 3D ──
+    if (d.phate_chart_json) {
+        Plotly.newPlot('phateChart', JSON.parse(d.phate_chart_json).data,
+                       JSON.parse(d.phate_chart_json).layout || {}, {responsive: true});
+    }
+
+    // ── 轨迹指标 ──
+    if (d.trajectory) {
+        let trjHtml = `
+            <div class="metric"><div class="val">${d.trajectory.total_dist.toFixed(2)}</div><div class="lbl">总轨迹长度</div></div>
+            <div class="metric"><div class="val">${d.trajectory.end_dist.toFixed(2)}</div><div class="lbl">起点→终点距</div></div>
+            <div class="metric"><div class="val">${d.trajectory.ratio.toFixed(2)}</div><div class="lbl">弯曲度比</div></div>
+        `;
+        document.getElementById('trajectoryMetrics').innerHTML = trjHtml;
+    }
+
+    // ── 分段表 ──
+    if (d.segments) {
+        let segTbl = '<table><tr><th>段</th><th>区间</th><th>长度</th><th>主题簇</th><th>起始文本</th></tr>';
+        d.segments.forEach(s => {
+            segTbl += `<tr><td>${s.id}</td><td>${s.range}</td><td>${s.len}</td><td>T${s.topic}</td><td>${s.preview}</td></tr>`;
+        });
+        segTbl += '</table>';
+        document.getElementById('segmentsTable').innerHTML = segTbl;
+
+        // ── 各段文本 ──
+        let segTextHtml = '';
+        d.segments.forEach(s => {
+            segTextHtml += `<div style="margin-bottom:12px;"><strong>段 ${s.id}</strong> | [${s.range}] | T${s.topic} | ${s.len} 句</div>
+                            <div class="seg-text">${s.full_text.join('\n\n')}</div><hr style="margin:12px 0;border:none;border-top:1px solid #eee;">`;
+        });
+        document.getElementById('segmentsText').innerHTML = segTextHtml;
+    }
+
+    // ── 日志 ──
+    if (d.log) {
+        document.getElementById('logContent').textContent = d.log.join('\n');
+    }
+
+    // 切换到概览 tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab').classList.add('active');
+    document.getElementById('tab-overview').classList.add('active');
+}
+
+async function summarizeSegments() {
+    if (!currentResult || !currentResult.segments) {
+        showError('请先运行分析，获取分段结果');
+        return;
+    }
+    document.getElementById('summarizeBtn').disabled = true;
+    document.getElementById('summarizeBtn').textContent = '⏳ 生成中...';
+    hideError();
+
+    // 显示原始流式输出
+    const summaryDiv = document.getElementById('summaryContent');
+    summaryDiv.innerHTML = '<pre id="streamOutput" style="white-space:pre-wrap;font-size:0.85rem;line-height:1.6;max-height:600px;overflow-y:auto;background:#f9f9fa;padding:12px;border-radius:8px;">等待响应...</pre>';
+    const streamPre = document.getElementById('streamOutput');
+    // 切换到摘要 tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab')[4].classList.add('active');
+    document.getElementById('tab-summary').classList.add('active');
+
+    try {
+        // 把每个 segment 的 full_text 数组合并成一个字符串发送
+        const segTexts = currentResult.segments.map(s => s.full_text.join('\n'));
+        const resp = await fetch('/summarize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ segments: segTexts })
+        });
+
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            showError(errData.error || `HTTP ${resp.status}`);
+            return;
+        }
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let rawContent = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.slice(6);
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.type === 'chunk') {
+                            rawContent += data.content;
+                            streamPre.textContent = rawContent;
+                        } else if (data.type === 'error') {
+                            showError(data.message);
+                        }
+                    } catch(e) {}
+                }
+            }
+        }
+        streamPre.textContent = rawContent || '[无内容]';
+    } catch(e) {
+        showError('摘要生成失败: ' + e.message);
+    } finally {
+        document.getElementById('summarizeBtn').disabled = false;
+        document.getElementById('summarizeBtn').textContent = '📝 生成分段摘要';
+    }
+}
+
+function showLoading() { document.getElementById('loading').classList.add('active'); }
+function hideLoading() { document.getElementById('loading').classList.remove('active'); }
+function showError(msg) { document.getElementById('error').textContent = msg; document.getElementById('error').style.display = 'block'; }
+function hideError() { document.getElementById('error').style.display = 'none'; }
+</script>
+</body>
+</html>

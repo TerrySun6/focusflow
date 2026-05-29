@@ -1,0 +1,66 @@
+{
+  "dataset": "XiaoWangZi",
+  "n_sentences": 1331,
+  "n_dimensions": 1024,
+  "model": "BAAI/bge-m3",
+  "config": {
+    "ema_alpha": 0.8,
+    "ema_window_size": 5,
+    "enable_centering": true,
+    "phate_knn": 5,
+    "phate_knn_dist": "cosine",
+    "tsne_perplexity": 30
+  },
+  "high_dim_clustering": {
+    "n_clusters": 193,
+    "n_noise": 99
+  },
+  "metrics": {
+    "pca": {
+      "trustworthiness": 0.813,
+      "smoothness": 1.1857,
+      "clustering_ari": 0.1056,
+      "trajectory": {
+        "total_distance": 200.91,
+        "end_to_end_distance": 0.23,
+        "tortuosity": 875.89
+      },
+      "coherence": {
+        "high_dim_mean_coherence": 0.8882,
+        "low_dim_mean_coherence": 0.8734,
+        "coherence_spearman_r": 0.4371
+      }
+    },
+    "t-sne": {
+      "trustworthiness": 0.9501,
+      "smoothness": 1.0154,
+      "clustering_ari": 0.2917,
+      "trajectory": {
+        "total_distance": 3574.52,
+        "end_to_end_distance": 35.81,
+        "tortuosity": 99.82
+      },
+      "coherence": {
+        "high_dim_mean_coherence": 0.8882,
+        "low_dim_mean_coherence": 0.9656,
+        "coherence_spearman_r": 0.1583
+      }
+    },
+    "phate": {
+      "trustworthiness": 0.8179,
+      "smoothness": 1.0087,
+      "clustering_ari": 0.5522,
+      "trajectory": {
+        "total_distance": 3.41,
+        "end_to_end_distance": 0.04,
+        "tortuosity": 82.48
+      },
+      "coherence": {
+        "high_dim_mean_coherence": 0.8882,
+        "low_dim_mean_coherence": 0.9918,
+        "coherence_spearman_r": 0.3086
+      }
+    }
+  },
+  "centering_comparison": null
+}

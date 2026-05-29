@@ -1,0 +1,13 @@
+近年来，自然语言处理（Natural Language Processing）领域经历了革命性的变化。
+以 Transformer 架构为代表的大规模预训练模型彻底改变了这一领域的研究范式。
+BERT 模型通过 Masked Language Model 的预训练目标实现了双向上下文的深度理解。
+而 GPT 系列则凭借自回归生成能力展示了惊人的文本创作潜力。
+这些模型的成功很大程度上归功于 Attention mechanism 的核心创新。
+Scaled Dot-Product Attention 通过计算 Query 和 Key 的点积来衡量词与词之间的关联权重。
+Multi-Head Attention 进一步将这个机制并行化，让模型从不同子空间捕捉语义关系。
+然而，随着模型规模的不断扩大，computational cost 和 energy consumption 也急剧增长。
+有研究指出，训练一个大型 language model 的碳排放相当于一辆汽车整个生命周期的排放量。
+因此，如何在高性能和可持续性之间找到平衡成为学术界和工业界共同关注的焦点。
+一些研究者开始探索模型压缩、知识蒸馏、量化等技术来降低部署成本。
+另外，最近兴起的 Mixture of Experts（MoE）架构通过稀疏激活机制显著提升了参数效率。
+展望未来，多模态理解和推理能力将是下一个重要的突破方向。
