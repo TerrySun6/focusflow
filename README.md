@@ -5,8 +5,6 @@
 
 **FocusFlow** 是一个用于文本/视频语义逻辑分析的 Python 研究项目。它通过 **BGE-M3 嵌入** + **EMA 时序平滑** + **Centering 去偏** + **PHATE 3D 降维** + **Leiden/HDBSCAN 聚类** + **PELT 变点检测** 的完整管线，将文本的逻辑结构映射到三维语义流形上，并进行定量分析和可视化。
 
-> 📌 本项目为上海市"中学生英才计划"研究课题的一部分。
-
 ---
 
 ## ✨ 核心特性
@@ -152,4 +150,3 @@ MIT License © 2026 TerrySun6
 - [PHATE](https://github.com/KrishnaswamyLab/PHATE) — 热扩散势能嵌入
 - [DeepSeek](https://deepseek.com/) — LLM API 支持
 - [Plotly](https://plotly.com/) — 交互式可视化
-- 上海市"中学生英才计划" — 项目资助与指导
